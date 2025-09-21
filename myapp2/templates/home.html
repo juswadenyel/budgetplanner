@@ -1,0 +1,32 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Planner</title>
+    <link rel="stylesheet" href="{% static 'myapp2/budget.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Budget Planner</h1>
+
+        <div class="budget-summary">
+            <div>Total Budget: $<span id="total-budget">0</span></div>
+            <div>Total Expenses: $<span id="total-expenses">0</span></div>
+            <div>Remaining: $<span id="remaining">0</span></div>
+        </div>
+
+        <form id="budget-form">
+            <input type="text" id="item" placeholder="Expense Name" required>
+            <input type="number" id="amount" placeholder="Amount" required>
+            <button type="submit">Add Expense</button>
+        </form>
+
+        <ul id="expense-list"></ul>
+    </div>
+
+   <script src="{% static 'myapp2/budget.js' %}"></script>
+</body>
+</html>
