@@ -1,32 +1,292 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Budget Planner</title>
-    <link rel="stylesheet" href="{% static 'myapp2/budget.css' %}">
+    <link rel="stylesheet" href="{% static 'css/budget.css' %}">
 </head>
 <body>
-    <div class="container">
-        <h1>💰 Budget Planner</h1>
+<div class="page-wrapper">
+    <div class="card">
 
-        <div class="budget-summary">
-            <div>Total Budget: $<span id="total-budget">0</span></div>
-            <div>Total Expenses: $<span id="total-expenses">0</span></div>
-            <div>Remaining: $<span id="remaining">0</span></div>
+        <!-- Header -->
+        <div class="card-header">
+            <div class="brand">
+                <span class="brand-icon">💰</span>
+                <span class="brand-title">Budget Planner</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-add-transaction" id="openAddModal">+ Add Transaction</button>
+                <button class="settings-btn" title="Settings">⚙</button>
+            </div>
         </div>
 
-        <form id="budget-form">
-            <input type="text" id="item" placeholder="Expense Name" required>
-            <input type="number" id="amount" placeholder="Amount" required>
-            <button type="submit">Add Expense</button>
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card income">
+                <div class="summary-icon income-icon">💵</div>
+                <div class="summary-info">
+                    <div class="summary-label">Total Income</div>
+                    <div class="summary-amount income-amount">${{ total_income|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="summary-card expense">
+                <div class="summary-icon expense-icon">💳</div>
+                <div class="summary-info">
+                    <div class="summary-label">Total Expenses</div>
+                    <div class="summary-amount expense-amount">${{ total_expenses|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="summary-card balance">
+                <div class="summary-icon balance-icon">🏦</div>
+                <div class="summary-info">
+                    <div class="summary-label">Remaining Balance</div>
+                    <div class="summary-amount balance-amount">${{ remaining|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <form method="get" class="filters-row" id="filter-form">
+            <div class="filter-group">
+                <label class="filter-label">Date Range</label>
+                <div class="select-wrapper">
+                    <span class="select-icon">📅</span>
+                    <select name="date_range" class="filter-select">
+                        <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>This Month</option>
+                        <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="last_7" {% if date_range == 'last_7' %}selected{% endif %}>Last 7 Days</option>
+                        <option value="last_30" {% if date_range == 'last_30' %}selected{% endif %}>Last 30 Days</option>
+                        <option value="this_year" {% if date_range == 'this_year' %}selected{% endif %}>This Year</option>
+                    </select>
+                    <span class="select-arrow">▾</span>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Category</label>
+                <div class="select-wrapper">
+                    <select name="category" class="filter-select">
+                        <option value="" {% if not category_filter %}selected{% endif %}>All Categories</option>
+                        {% for cat in all_categories %}
+                        <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="select-arrow">▾</span>
+                </div>
+            </div>
+            <button type="submit" class="btn-apply">Apply Filter</button>
         </form>
 
-        <ul id="expense-list"></ul>
-    </div>
+        <!-- Transactions Table -->
+        <div class="transactions-section">
+            <h2 class="section-title">Transactions</h2>
+            <table class="transactions-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td class="td-date">{{ t.date }}</td>
+                        <td class="td-category">
+                            <span class="cat-badge" style="background:{{ t.icon_bg }}; color:{{ t.icon_color }}">
+                                {{ t.icon }}
+                            </span>
+                            <span class="cat-name">{{ t.category }}</span>
+                        </td>
+                        <td class="td-amount {% if t.transaction_type == 'Income' %}amount-positive{% else %}amount-negative{% endif %}">
+                            {% if t.transaction_type == 'Income' %}+{% else %}-{% endif %}${{ t.amount|floatformat:2 }}
+                        </td>
+                        <td class="td-desc">
+                            <span class="desc-text" title="{{ t.description }}">{{ t.description|truncatechars:30 }}</span>
+                        </td>
+                        <td class="td-actions">
+                            <button class="action-btn edit-btn" onclick="openEditModal({{ t.id }})">✏️</button>
+                            <button class="action-btn delete-btn" onclick="openDeleteModal({{ t.id }})">🗑️</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="empty-state">No transactions found. Start by adding your first transaction.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-   <script src="{% static 'myapp2/budget.js' %}"></script>
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            {% if has_prev %}
+            <a class="page-btn" href="?date_range={{ date_range }}&category={{ category_filter }}&page={{ current_page|add:'-1' }}">&#8249;</a>
+            {% else %}
+            <span class="page-btn disabled">&#8249;</span>
+            {% endif %}
+
+            {% for p in page_range %}
+            <a class="page-btn {% if p == current_page %}active{% endif %}"
+               href="?date_range={{ date_range }}&category={{ category_filter }}&page={{ p }}">{{ p }}</a>
+            {% endfor %}
+
+            {% if has_next %}
+            <a class="page-btn" href="?date_range={{ date_range }}&category={{ category_filter }}&page={{ current_page|add:'1' }}">&#8250;</a>
+            {% else %}
+            <span class="page-btn disabled">&#8250;</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div><!-- end .card -->
+</div><!-- end .page-wrapper -->
+
+<!-- ADD TRANSACTION MODAL -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add Transaction</h3>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="add-type" class="form-control">
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="add-category" class="form-control">
+                        <option value="Salary">Salary</option>
+                        <option value="Allowance">Allowance</option>
+                        <option value="Business">Business</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Food">Food</option>
+                        <option value="Transportation">Transportation</option>
+                        <option value="Bills">Bills</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Health">Health</option>
+                        <option value="Education">Education</option>
+                        <option value="Groceries">Groceries</option>
+                        <option value="Dining Out">Dining Out</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="add-amount" class="form-control" placeholder="0.00" min="0.01" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="add-date" class="form-control">
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label>Description (optional)</label>
+                <input type="text" id="add-description" class="form-control" placeholder="Add a note...">
+            </div>
+            <div id="add-error" class="form-error"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addModal')">Cancel</button>
+            <button class="btn-save" onclick="submitAdd()">Save Transaction</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT TRANSACTION MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Edit Transaction</h3>
+            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-id">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="edit-type" class="form-control">
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="edit-category" class="form-control">
+                        <option value="Salary">Salary</option>
+                        <option value="Allowance">Allowance</option>
+                        <option value="Business">Business</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Food">Food</option>
+                        <option value="Transportation">Transportation</option>
+                        <option value="Bills">Bills</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Health">Health</option>
+                        <option value="Education">Education</option>
+                        <option value="Groceries">Groceries</option>
+                        <option value="Dining Out">Dining Out</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="edit-amount" class="form-control" min="0.01" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="edit-date" class="form-control">
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label>Description (optional)</label>
+                <input type="text" id="edit-description" class="form-control">
+            </div>
+            <div id="edit-error" class="form-error"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editModal')">Cancel</button>
+            <button class="btn-save" onclick="submitEdit()">Update Transaction</button>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <h3>Delete Transaction</h3>
+            <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <p class="delete-warning">⚠️ This action cannot be undone. Are you sure you want to delete this transaction?</p>
+            <input type="hidden" id="delete-id">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button>
+            <button class="btn-danger" onclick="submitDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="{% static 'js/budget.js' %}"></script>
 </body>
 </html>
