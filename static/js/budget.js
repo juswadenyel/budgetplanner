@@ -4,21 +4,17 @@ function openModal(id) {
 }
 function closeModal(id) {
     document.getElementById(id).classList.remove('open');
-    // Clear errors
     const err = document.getElementById(id.replace('Modal', '') + '-error');
     if (err) err.textContent = '';
 }
 
-// Close modal on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', function(e) {
         if (e.target === this) closeModal(this.id);
     });
 });
 
-// Open add modal
 document.getElementById('openAddModal').addEventListener('click', () => {
-    // Set today's date as default
     document.getElementById('add-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('add-amount').value = '';
     document.getElementById('add-description').value = '';

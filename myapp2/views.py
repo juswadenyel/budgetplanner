@@ -1,9 +1,7 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Sum, Q
-from django.utils import timezone
+from django.db.models import Sum
 from datetime import date, timedelta
 import json
 
@@ -116,8 +114,10 @@ def home(request):
     return render(request, 'home.html', context)
 
 
-@require_http_methods(["POST"])
+@csrf_exempt
 def add_transaction(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
     try:
         data = json.loads(request.body)
         amount = float(data.get('amount', 0))
@@ -150,8 +150,10 @@ def add_transaction(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@require_http_methods(["POST"])
+@csrf_exempt
 def edit_transaction(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
     try:
         t = get_object_or_404(Transaction, pk=pk)
         data = json.loads(request.body)
@@ -170,11 +172,24 @@ def edit_transaction(request, pk):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@require_http_methods(["POST"])
+@csrf_exempt
 def delete_transaction(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
     try:
         t = get_object_or_404(Transaction, pk=pk)
         t.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def clear_all(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+    try:
+        Transaction.objects.all().delete()
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

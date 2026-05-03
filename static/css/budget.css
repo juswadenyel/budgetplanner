@@ -73,17 +73,6 @@ body {
 }
 .btn-add-transaction:hover { background: #1a5fd4; }
 
-.settings-btn {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: #94a3b8;
-    transition: color 0.2s;
-    padding: 4px;
-}
-.settings-btn:hover { color: #475569; }
-
 /* ── Summary Cards ─────────────────────────────────── */
 .summary-cards {
     display: grid;
